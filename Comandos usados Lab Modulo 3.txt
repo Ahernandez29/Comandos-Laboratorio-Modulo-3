@@ -19,6 +19,7 @@ mount -o remount,rw /sysroot
 chroot /sysroot
 passwd
 ingresar la nueva contrasena
+touch /.autorelabel
 exit
 exit
 
@@ -89,4 +90,167 @@ realize la prueba intentando conectarse via ssh nuevamente desde la maquina host
 
 ssh 20240916-AH@ip_servidor_remoto
 
-============================================
+============================================************************************************************************
+
+
+Configuración básica de Servidor FTP  (Centos 8):
+
+Conexiones anónimas:
+
+Se instala el servidor ftp:
+[root@server ~]# dnf -y install vsftpd
+
+
+Se habilitan los servicios necesarios:
+[root@server ~]# systemctl enable vsftpd
+[root@server ~]# systemctl start vsftpd
+
+
+De forma predeterminada la carpeta asignada para el servidor ftp es:
+/var/ftp
+
+
+
+Editamos el archivo vsftpd.conf:
+[root@server ~]# vi /etc/vsftpd/vsftpd.conf
+
+
+Si queremos aceptar conexiones anónimas debemos asegurarnos que la siguiente línea esté descomentada y en YES:
+anonymous_enable=YES
+
+
+Si se desea permitir las conexiones anónimas sin el uso de password hay que agregar la línea siguiente:
+no_anon_password=YES
+
+
+Por otra parte, si se desea dar acceso a los usuarios locales del sistema, se debe descomentar la siguiente línea:
+#local_enable=YES
+
+
+Configuramos la regla del firewall:
+[root@server ~]# firewall-cmd --permanent --add-port=20-21/tcp
+[root@server ~]# firewall-cmd --reload
+
+
+Comprobar que SELinux está deshabilitado.
+[root@server ~]# setenforce 0
+
+
+Reiniciamos el servicio vsftpd:
+[root@server ~]# systemctl restart vsftpd
+
+FTP - Conexiones por usuarios autorizados:
+
+Se instala el servidor ftp:
+[root@server ~]# dnf -y install vsftpd
+
+
+Editamos el archivo vsftpd.conf:
+[root@server ~]# vi /etc/vsftpd/vsftpd.conf
+
+
+Si queremos rechazar conexiones anónimas debemos comentar la siguiente línea o ponerla en NO:
+anonymous_enable=NO
+
+
+Por otorgar acceso a los usuarios creados, se debe descomentar la siguiente línea:
+local_enable=YES
+
+
+Si además, los usuarios podrán subir archivos al servidor, será necesario usar la siguiente opción:
+write_enable=YES
+
+
+Es conveniente restringir el acceso a otros directorios fuera del directorio del usuario, para ello es necesario habilitar la siguiente opción:
+chroot_local_users=YES
+
+
+Indica que se verificará la lista de usuarios en cada conexión:
+userlist_enable=YES
+
+
+Al final del archivo agregar las siguientes líneas:
+allow_writeable_chroot=YES
+userlist_file=/etc/vsftpd/user_list
+userlist_deny=NO
+
+pasv_min_port=20000
+pasv_max_port=20100
+
+El modo pasivo ayuda a prevenir problemas en la conexión ocasionados por el firewall del cliente.
+
+Configuramos la regla del firewall:
+[root@server ~]# firewall-cmd --permanent --add-service=ftp
+[root@server ~]# firewall-cmd --permanent --add-port=20000-20100/tcp
+[root@server ~]# firewall-cmd --reload
+
+
+Comprobar que SELinux está deshabilitado.
+[root@server ~]# setenforce 0
+
+
+Cear el usuario al que se le dará acceso:
+[root@server ~]# adduser ftpuser
+[root@server ~]# passwd ftpuser
+
+Agregamos el usuario al archivo ´/etc/vsftpd/user_list´:
+[root@server ~]# echo ftpuser >>  /etc/vsftpd/user_list
+
+Iniciamos el servicio vsftpd:
+[root@server ~]# systemctl enable vsftpd  --now
+
+El servidor debe estar en línea y accesible para los usuarios configurados:
+
+Configuración de certificados SSL:
+
+Generar el certificado ssl:
+[root@server ~]# openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /etc/vsftpd/vsftpd.pem -out /etc/vsftpd/vsftpd.pem
+
+
+
+Se habilita ssl y se especifican las rutas correspondientes en el archivo vsftpd.conf
+[root@server ~]# vi /etc/vsftpd/vsftpd.conf
+
+
+ssl_enable=YES
+rsa_cert_file=/etc/vsftpd/vsftpd.pem
+rsa_private_key_file=/etc/vsftpd/vsftpd.pem
+
+**********************************************************************************************************************
+Configuración de servidor DHCP  (Centos 8):
+
+Se instala el servidor DHCP.
+[root@server ~]# dnf -y install dhcp-server
+
+Una vez instalado es necesario realizar la configuración en el archivo dhcpd.conf que se encuentra en el directorio /etc/dhcp, sin embargo, este se encuentra vacío de momento:
+[root@server ~]# vi /etc/dhcp/dhcpd.conf 
+De ser necesario, se puede encontrar un archivo de referencia en
+ /usr/share/doc/dhcp-server/dhcpd.conf.example.
+
+Para una configuración básica, el archivo sólo necesita lo siguiente:
+default-lease-time 600;
+max-lease-time 7200;
+
+
+subnet 192.168.1.0 netmask 255.255.255.0 {
+range 192.168.1.150 192.168.1.160;
+option broadcast-address 192.168.1.255;
+option routers 192.168.1.254;
+option domain-name-servers 8.8.8.8;
+}
+
+Si se desea asignar direcciones IP fijas a un equipo se usa la siguiente sintaxis:
+host testing{
+hardware ethernet 08:00:27:bb:9a:01;
+fixed-address 192.168.1.160;  
+}
+
+Se aplican las políticas de firewall correspondientes.
+[root@server ~]# firewall-cmd --add-service=dhcp --permanent
+[root@server ~]# firewall-cmd --reload
+
+Guardamos el archivo y arrancamos el servicio:
+[root@server ~]# systemctl enable dhcpd --now
+
+Con lo anterior, les será asignada una dirección IP los clientes que lo soliciten.
+
