@@ -47,6 +47,40 @@ tar -czvf $DESTINO/$ARCHIVO /home/$USUARIO
 echo "Backup de /home/$USUARIO completado!"
 echo "Archivo guardado en: $DESTINO/$ARCHIVO"
 
+ Variables
+Puedes guardar datos en variables así:
+nombre="Argenis"
+echo "Hola $nombre"
+
+Leer datos del usuario
+echo "¿Cómo te llamas?"
+read nombre
+echo "Hola, $nombre"
+read captura lo que el usuario escriba y lo guarda en la variable.
+
+Condicionales (if):
+echo "¿Tienes 18 años o más? (s/n)"
+read respuesta
+
+if [[ "$respuesta" == "s" ]]; then
+  echo "Puedes continuar."
+else
+  echo "Lo siento, necesitas tener al menos 18."
+fi
+
+Bucles for:
+for i in 1 2 3; do
+  echo "Contando: $i"
+done
+
+Funciones:
+saludo() {
+  echo "Hola desde una función"
+}
+
+saludo
+
+
 **********************************************
 
 * Crear un script que copie el resultado del comando ifconfig en un archivo en el escritorio. El script debe de preguntar cual nombre desea ponerle al archivo y crear el archivo con el nombre provisto.
